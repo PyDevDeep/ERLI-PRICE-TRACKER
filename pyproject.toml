@@ -34,6 +34,7 @@ testcontainers = "^4.3.1"
 fakeredis = "^2.21.3"
 ruff = ">=0.9.5"
 pyright = ">=1.1.400"
+pre-commit = "^4.5.1"
 
 [build-system]
 requires = ["poetry-core"]
