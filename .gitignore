@@ -18,7 +18,6 @@ dist/
 
 # Environment
 .env
-.env.*
 
 # Database / Volumes
 postgres_data/
