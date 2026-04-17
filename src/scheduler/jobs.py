@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -9,9 +10,9 @@ from src.integrations.serper_client import SerperClient
 from src.integrations.telegram_client import TelegramClient
 from src.models.base import async_session_maker
 from src.services.alerter import send_price_alert
-from src.services.parser import parse_erli_data
+from src.services.parser import parse_erli_data_smart
 from src.services.price_monitor import compare_price, store_history
-from src.services.product_repo import get_all_products
+from src.services.product_repo import get_all_products, get_product_history
 
 if TYPE_CHECKING:
     from src.integrations.ai_router import AIRouter
@@ -60,7 +61,7 @@ async def scrape_all_products() -> None:
 
                 try:
                     raw_data = await serper_client.scrape_url(product.url)
-                    parsed = parse_erli_data(raw_data)
+                    parsed = await parse_erli_data_smart(raw_data, ai_router)
 
                     await store_history(
                         session=session,
@@ -99,3 +100,57 @@ async def scrape_all_products() -> None:
                 await asyncio.sleep(1)
 
     logger.info("scheduler_job_finished", job="scrape_all_products")
+
+
+@scheduler.scheduled_job("cron", day_of_week="sun", hour=10, timezone="Europe/Kyiv")  # type: ignore[misc]
+async def generate_weekly_insights() -> None:
+    """Генерація щотижневого AI-зведення для користувача."""
+    logger.info("scheduler_job_started", job="generate_weekly_insights")
+
+    ai_router = scheduler.ai_router
+    if not ai_router:
+        logger.error("scheduler_missing_dependency", dependency="ai_router")
+        return
+
+    telegram_client = TelegramClient()
+    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+
+    async with async_session_maker() as session:
+        products = await get_all_products(session)
+        if not products:
+            return
+
+        market_data: list[str] = []
+        for p in products:
+            history = await get_product_history(session, p.id, limit=20, since=one_week_ago)
+            if not history:
+                continue
+
+            latest = history[0].price_min
+            oldest = history[-1].price_min
+
+            if latest and oldest:
+                delta = float((latest - oldest) / oldest) * 100
+                market_data.append(
+                    f"Товар: {p.name} | Ціна тиждень тому: {oldest} zl | Поточна ціна: {latest} zl | Зміна: {delta:.1f}%"
+                )
+
+    if not market_data:
+        logger.info("insights_no_data")
+        return
+
+    context_str = "\n".join(market_data)
+    prompt = f"""Ти фінансовий асистент. Проаналізуй зміну цін на товари користувача за тиждень і напиши коротке, цікаве зведення (до 3-4 абзаців).
+Стиль: дружній, лаконічний. Мова: українська.
+Виділи головне: що подешевшало (рекомендуй брати), що подорожчало. Не перелічуй всі товари як робот, зроби висновки про тренди.
+
+Сирі дані:
+{context_str}"""
+
+    try:
+        response = await ai_router.complete([{"role": "user", "content": prompt}], max_tokens=400)
+        report = f"📊 <b>Твої цінові інсайти за тиждень:</b>\n\n{response.content}"
+        await telegram_client.send_alert(report)
+        logger.info("weekly_insights_sent")
+    except Exception as e:
+        logger.error("weekly_insights_failed", error=str(e))

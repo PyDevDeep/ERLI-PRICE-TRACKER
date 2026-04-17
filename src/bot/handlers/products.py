@@ -1,5 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import structlog
 from aiogram import F, Router
+
+if TYPE_CHECKING:
+    from src.integrations.ai_router import AIRouter
+
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -19,7 +27,7 @@ from src.config.settings import settings
 from src.integrations.serper_client import SerperClient
 from src.models.base import async_session_maker
 from src.models.product import Product
-from src.services.parser import parse_erli_data
+from src.services.parser import parse_erli_data_smart
 from src.services.price_monitor import store_history
 from src.services.product_repo import (
     get_or_create_product,
@@ -73,7 +81,7 @@ async def cmd_add(message: Message, state: FSMContext) -> None:
 
 
 @router.message(StateFilter(AddProduct.waiting_for_url))
-async def process_url(message: Message, state: FSMContext) -> None:
+async def process_url(message: Message, state: FSMContext, ai_router: "AIRouter") -> None:
     url = message.text.strip() if message.text else ""
 
     if not url.startswith("https://erli.pl/produkt/"):
@@ -85,7 +93,7 @@ async def process_url(message: Message, state: FSMContext) -> None:
     try:
         serper = SerperClient()
         raw_data = await serper.scrape_url(url)
-        parsed = parse_erli_data(raw_data)
+        parsed = await parse_erli_data_smart(raw_data, ai_router)
 
         async with async_session_maker() as session:
             product = await get_or_create_product(session, url=url, name=parsed.get("name"))

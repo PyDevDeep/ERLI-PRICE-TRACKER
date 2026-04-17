@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 6. Ініціалізація та запуск Telegram Бота
     bot = create_bot()
     dp = create_dispatcher()
+    dp["ai_router"] = ai_router
 
     logger.info("bot_starting")
     # Запускаємо polling бота у фоновому таску, щоб не блокувати FastAPI

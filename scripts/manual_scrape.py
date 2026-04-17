@@ -3,14 +3,17 @@ import asyncio
 import os
 import sys
 
-# Додаємо корінь проекту до PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from src.config.settings import settings
+from src.integrations.ai_router import AIRouter
+from src.integrations.anthropic_client import AnthropicClient
+from src.integrations.openai_client import OpenAIClient
 from src.integrations.serper_client import SerperClient
 from src.integrations.telegram_client import TelegramClient
 from src.models.base import async_session_maker
 from src.services.alerter import send_price_alert
-from src.services.parser import parse_erli_data
+from src.services.parser import parse_erli_data_smart
 from src.services.price_monitor import compare_price, store_history
 from src.services.product_repo import get_or_create_product
 
@@ -18,17 +21,27 @@ from src.services.product_repo import get_or_create_product
 async def main(url: str) -> None:
     print(f"[*] Ініціалізація скрапінгу для URL: {url}")
 
+    openai_client = OpenAIClient(
+        api_key=settings.OPENAI_API_KEY,
+        model=settings.OPENAI_MODEL,
+        timeout=settings.OPENAI_TIMEOUT_SECONDS,
+    )
+    anthropic_client = AnthropicClient(
+        api_key=settings.ANTHROPIC_API_KEY,
+        model=settings.ANTHROPIC_MODEL,
+        timeout=settings.ANTHROPIC_TIMEOUT_SECONDS,
+    )
+    ai_router = AIRouter(openai_client, anthropic_client, settings)
+
     serper = SerperClient()
     telegram = TelegramClient()
 
     try:
-        # 1. Scrape
         print("[*] Виконання запиту до Serper API...")
         raw_data = await serper.scrape_url(url)
 
-        # 2. Parse
         print("[*] Парсинг даних...")
-        parsed = parse_erli_data(raw_data)
+        parsed = await parse_erli_data_smart(raw_data, ai_router)
 
         print("\n--- Результат парсингу ---")
         for k, v in parsed.items():
@@ -38,10 +51,8 @@ async def main(url: str) -> None:
         if not parsed.get("price_min"):
             print("[!] УВАГА: Ціну не знайдено. Збереження історії може бути неповним.")
 
-        # 3. DB Operations
         print("[*] Збереження в базу даних...")
         async with async_session_maker() as session:
-            # Гарантуємо наявність продукту в БД перед записом історії
             product = await get_or_create_product(
                 session=session, url=url, name=parsed.get("name") or "Manual Scrape Product"
             )
@@ -54,7 +65,6 @@ async def main(url: str) -> None:
                 rating=parsed.get("rating"),
             )
 
-            # 4. Compare & Alert
             price_change = await compare_price(session, product.id)
             await session.commit()
 
@@ -79,6 +89,8 @@ async def main(url: str) -> None:
     except Exception as e:
         print(f"[X] КРИТИЧНА ПОМИЛКА: {e}")
         sys.exit(1)
+    finally:
+        await ai_router.close()
 
 
 if __name__ == "__main__":

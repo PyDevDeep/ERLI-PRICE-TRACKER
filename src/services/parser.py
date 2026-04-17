@@ -1,17 +1,24 @@
-import re
+import json
 from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 
 import structlog
 
+from src.integrations.ai_router import AIRouter
+
 logger = structlog.get_logger(__name__)
 
+LLM_EXTRACTOR_PROMPT = """
+Ти екстрактор даних з e-commerce сторінок. Твоє завдання — знайти ціну та назву товару.
+Поверни ТІЛЬКИ валідний JSON без жодного markdown-форматування (без блоків ```json).
+Формат: {"price_min": float | null, "price_max": float | null, "name": str | null, "rating": float | null}
+Якщо даних немає, поверни null для відповідних полів.
+"""
 
-def parse_erli_data(data: dict[str, Any]) -> dict[str, Any]:
+
+async def parse_erli_data_smart(data: dict[str, Any], ai_router: AIRouter) -> dict[str, Any]:
     """
-    Парсить дані товару з відповіді Serper.
-    Пріоритет 1: jsonld (Schema.org) - структуровані дані.
-    Пріоритет 2: Regex fallback по полю text.
+    Парсить дані. Пріоритет 1: jsonld (Schema.org). Пріоритет 2: LLM аналіз тексту сторінки.
     """
     result: dict[str, Any] = {
         "name": None,
@@ -20,7 +27,7 @@ def parse_erli_data(data: dict[str, Any]) -> dict[str, Any]:
         "rating": None,
     }
 
-    # 1. Спроба витягти з JSON-LD
+    # --- Пріоритет 1: Швидкий парсинг JSON-LD ---
     jsonld: dict[str, Any] = data.get("jsonld") or {}
     if jsonld:
         result["name"] = jsonld.get("name")
@@ -44,31 +51,48 @@ def parse_erli_data(data: dict[str, Any]) -> dict[str, Any]:
             except InvalidOperation:
                 pass
 
-    # 2. Fallback: Regex по text, якщо ціна досі не знайдена
-    if result["price_min"] is None and "text" in data:
-        text: str = str(data["text"])
-        # Патерн: числа з пробілами, кома, 2 цифри, zł. Напр: "4 749,00 zł" або "4749,00 zł"
-        price_pattern = r"([\d\s]+,\d{2})\s*z[łl]"
-        matches: list[str] = re.findall(price_pattern, text.lower())
+    if result["price_min"] is not None:
+        logger.info("parser_jsonld_success")
+        return result
 
-        if matches:
-            prices: list[Decimal] = []
-            for match in matches:
-                # Очищення: видалення пробілів, заміна коми на крапку
-                clean_val = re.sub(r"\s+", "", match).replace(",", ".")
-                try:
-                    prices.append(Decimal(clean_val).quantize(Decimal("0.01")))
-                except InvalidOperation:
-                    continue
+    # --- Пріоритет 2: LLM Fallback (замість Regex) ---
+    text: str = str(data.get("text", ""))
+    if not text:
+        logger.warning("parser_failed_no_text")
+        return result
 
-            if prices:
-                result["price_min"] = min(prices)
-                result["price_max"] = max(prices)
+    truncated_text = text[:4000]
 
-                logger.info("parser_regex_fallback_used", min=str(result["price_min"]))
+    messages = [
+        {"role": "system", "content": LLM_EXTRACTOR_PROMPT},
+        {"role": "user", "content": f"Текст сторінки: {truncated_text}"},
+    ]
 
-    if not result["price_min"]:
-        metadata: dict[str, Any] = data.get("metadata") or {}
-        logger.warning("parser_failed_to_extract_price", url=metadata.get("og:url"))
+    ai_response = None
+    try:
+        ai_response = await ai_router.complete(messages, max_tokens=150)
+
+        clean_json = ai_response.content.strip().strip("`").removeprefix("json").strip()
+        llm_data = json.loads(clean_json)
+
+        if llm_data.get("price_min"):
+            result["price_min"] = Decimal(str(llm_data["price_min"])).quantize(Decimal("0.01"))
+            result["price_max"] = Decimal(
+                str(llm_data.get("price_max") or llm_data["price_min"])
+            ).quantize(Decimal("0.01"))
+        if llm_data.get("name") and not result["name"]:
+            result["name"] = llm_data["name"]
+
+        logger.info(
+            "parser_llm_fallback_used",
+            provider=ai_response.provider,
+            latency=ai_response.latency_ms,
+        )
+
+    except json.JSONDecodeError as e:
+        raw = ai_response.content if ai_response else "<no response>"
+        logger.error("parser_llm_invalid_json", error=str(e), raw_response=raw)
+    except Exception as e:
+        logger.error("parser_llm_failed", error=str(e))
 
     return result
