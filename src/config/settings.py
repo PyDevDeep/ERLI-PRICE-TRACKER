@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ALERT_LANGUAGE: str = "uk"
 
     # Business Logic
-    SCRAPE_INTERVAL_HOURS: int = 4
+    SCRAPE_INTERVAL_HOURS: int = 12
     PRICE_CHANGE_THRESHOLD_PERCENT: float = 5.0
 
     # AI Router - Primary (OpenAI)

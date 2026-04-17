@@ -6,9 +6,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore[impo
 
 from src.config.settings import settings
 from src.integrations.serper_client import SerperClient
+from src.integrations.telegram_client import TelegramClient
 from src.models.base import async_session_maker
+from src.services.alerter import send_price_alert
 from src.services.parser import parse_erli_data
-from src.services.price_monitor import store_history
+from src.services.price_monitor import compare_price, store_history
 from src.services.product_repo import get_all_products
 
 if TYPE_CHECKING:
@@ -36,6 +38,7 @@ async def scrape_all_products() -> None:
         return
 
     serper_client = SerperClient()
+    telegram_client = TelegramClient()
 
     async with async_session_maker() as session:
         products = await get_all_products(session)
@@ -66,12 +69,33 @@ async def scrape_all_products() -> None:
                         price_max=parsed.get("price_max"),
                         rating=parsed.get("rating"),
                     )
+
+                    # Перевіряємо зміну ціни ДО коміту, щоб дані були в межах однієї логічної операції
+                    price_change = await compare_price(session, product.id)
+
                     await session.commit()
+
+                    # Якщо є зміна — надсилаємо сповіщення (після коміту, щоб не тримати транзакцію)
+                    if price_change:
+                        logger.info(
+                            "price_change_detected",
+                            product_id=product.id,
+                            delta=price_change.delta_percent,
+                        )
+                        await send_price_alert(
+                            telegram_client=telegram_client,
+                            product_name=price_change.product,
+                            old_price=price_change.old_price,
+                            new_price=price_change.new_price,
+                            delta_percent=price_change.delta_percent,
+                            url=product.url,
+                        )
+
                 except Exception as e:
                     logger.error("scraping_product_failed", product_id=product.id, error=str(e))
                     await session.rollback()
 
-                # Жорсткий троттлінг 1 сек згідно з лімітами Serper
+                # Жорсткий троттлінг 1 сек
                 await asyncio.sleep(1)
 
     logger.info("scheduler_job_finished", job="scrape_all_products")
