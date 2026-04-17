@@ -35,4 +35,4 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://127.0.0.1:$PORT/health || exit 1
 
-CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
+CMD python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT
