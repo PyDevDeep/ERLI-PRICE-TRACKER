@@ -1,9 +1,3 @@
-"""
-File: src/integrations/openai_client.py
-Task: 1.5.1.1 - OpenAI client implementation
-Dependencies: httpx, structlog
-"""
-
 import httpx
 import structlog
 
