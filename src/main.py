@@ -90,5 +90,6 @@ async def app_error_handler(request: Request, exc: BaseAppError):
 
 
 @app.get("/health")
+@app.head("/health")
 async def health_check() -> dict[str, object]:
     return {"status": "ok", "scheduler_running": scheduler.running}  # type: ignore[no-untyped-call]
