@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN poetry install --only main --no-root && rm -rf $POETRY_CACHE_DIR
 
 # --- Stage 2: Production ---
 FROM python:3.11-slim
@@ -20,12 +20,12 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    PORT=8000
+    PORT=8000 \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
-COPY --from=builder /app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /app/.venv ./.venv
 
 COPY src/ ./src/
 
@@ -35,4 +35,4 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://127.0.0.1:$PORT/health || exit 1
 
-CMD python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT
+CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
