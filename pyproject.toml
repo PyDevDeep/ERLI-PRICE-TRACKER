@@ -27,6 +27,7 @@ openai = "^1.16.2"
 anthropic = "^0.23.1"
 apscheduler = "^3.11.2"
 python-telegram-bot = "^22.7"
+aiogram = "^3.27.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
