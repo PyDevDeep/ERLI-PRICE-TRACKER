@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
-from src.bot.handlers import common
+from src.bot.handlers import common, products
 from src.config.settings import settings
 
 
@@ -15,7 +15,7 @@ def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
 
     # Підключення роутерів
+    dp.include_router(products.router)
     dp.include_router(common.router)
-    # Наступні роутери (products.py) будуть додані тут
 
     return dp

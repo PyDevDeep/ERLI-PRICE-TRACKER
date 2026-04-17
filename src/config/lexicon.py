@@ -22,8 +22,10 @@ LEXICON: dict[str, dict[str, str]] = {
         "fallback": "Я не розумію цю команду. Натисни /help для довідки.",
         "ask_url": "🔗 Відправ мені валідне посилання на товар з erli.pl:",
         "invalid_url": "❌ Некоректне посилання. Спробуй ще раз (має починатися з https://erli.pl/produkt/):",
+        "added_success": "✅ Товар успішно додано до відстеження!",
+        "already_exists": "ℹ️ Цей товар уже є у твоєму списку.",
         "cancel": "🚫 Дію скасовано.",
-        "btn_cancel": "Скасувати",
+        "btn_cancel": "❌ Скасувати",
         # Сповіщення (Alerts)
         "alert_title": "🔔 <b>Зміна ціни:</b> {product_name}",
         "price_drop": "📉 {old_price} zł → {new_price} zł (⬇️ {delta_percent}%)",
@@ -53,8 +55,10 @@ LEXICON: dict[str, dict[str, str]] = {
         "fallback": "I don't understand this command. Press /help for assistance.",
         "ask_url": "🔗 Please send me a valid product link from erli.pl:",
         "invalid_url": "❌ Invalid link. Please try again (must start with https://erli.pl/produkt/):",
+        "added_success": "✅ Product successfully added to tracking!",
+        "already_exists": "ℹ️ This product is already in your list.",
         "cancel": "🚫 Action cancelled.",
-        "btn_cancel": "Cancel",
+        "btn_cancel": "❌ Cancel",
         # Alerts
         "alert_title": "🔔 <b>Price Alert:</b> {product_name}",
         "price_drop": "📉 {old_price} zł → {new_price} zł (⬇️ {delta_percent}%)",
