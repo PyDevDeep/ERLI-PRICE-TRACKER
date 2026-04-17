@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import httpx
 import structlog
 from tenacity import (
@@ -28,13 +30,13 @@ class SerperClient:
         # Таймаут згідно з Roadmap (1.5s latency + margin)
         self.timeout = httpx.Timeout(30.0)
 
-    @retry(
+    @retry(  # type: ignore[misc]
         retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.RequestError)),
         wait=wait_exponential(multiplier=2, min=2, max=60),
         stop=stop_after_attempt(3),
         reraise=True,
     )
-    async def scrape_url(self, url: str) -> str:
+    async def scrape_url(self, url: str) -> dict[str, object]:
         logger.info("serper_request_start", url=url)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -47,15 +49,8 @@ class SerperClient:
                 response.raise_for_status()
 
                 data = response.json()
-
-                if "text" not in data:
-                    logger.error(
-                        "serper_missing_text_field", url=url, response_keys=list(data.keys())
-                    )
-                    raise SerperAPIError("Invalid Serper response format: missing 'text' field")
-
                 logger.info("serper_request_success", url=url)
-                return data["text"]
+                return data
 
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
