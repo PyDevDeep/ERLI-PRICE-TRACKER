@@ -4,17 +4,18 @@ from aiogram.types import Message
 
 from src.config.lexicon import LEXICON
 
-# Створюємо роутер для базових команд
 router = Router(name="common_router")
+
+_L = LEXICON["uk"]
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     """Обробник команди /start"""
-    await message.answer(text=LEXICON["start"])
+    await message.answer(text=_L["start"])
 
 
 @router.message(Command(commands=["help"]))
 async def cmd_help(message: Message):
     """Обробник команди /help"""
-    await message.answer(text=LEXICON["help"], parse_mode="HTML")
+    await message.answer(text=_L["help"], parse_mode="HTML")
