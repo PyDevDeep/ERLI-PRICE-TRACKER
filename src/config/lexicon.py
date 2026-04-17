@@ -19,10 +19,16 @@ LEXICON: dict[str, dict[str, str]] = {
             "/history &lt;ID&gt; — Переглянути історію цін конкретного товару\n"
             "/delete &lt;ID&gt; — Видалити товар"
         ),
+        # Головне меню
+        "btn_main_add": "➕ Додати товар",
+        "btn_main_list": "📋 Мій список",
+        "btn_main_help": "❓ Довідка",
         "fallback": "Я не розумію цю команду. Натисни /help для довідки.",
         "ask_url": "🔗 Відправ мені валідне посилання на товар з erli.pl:",
         "invalid_url": "❌ Некоректне посилання. Спробуй ще раз (має починатися з https://erli.pl/produkt/):",
-        "added_success": "✅ Товар успішно додано до відстеження!",
+        "adding_in_progress": "⏳ Додаю товар та отримую актуальну ціну. Зачекайте декілька секунд...",
+        "added_success": "✅ Товар успішно додано та проскановано!",
+        "add_failed": "❌ Не вдалося додати товар. Спробуйте пізніше.",
         "already_exists": "ℹ️ Цей товар уже є у твоєму списку.",
         "cancel": "🚫 Дію скасовано.",
         "btn_cancel": "❌ Скасувати",
@@ -64,10 +70,16 @@ LEXICON: dict[str, dict[str, str]] = {
             "/history &lt;ID&gt; — View price history of a specific product\n"
             "/delete &lt;ID&gt; — Delete product"
         ),
+        # Main menu
+        "btn_main_add": "➕ Add product",
+        "btn_main_list": "📋 My list",
+        "btn_main_help": "❓ Help",
         "fallback": "I don't understand this command. Press /help for assistance.",
         "ask_url": "🔗 Please send me a valid product link from erli.pl:",
         "invalid_url": "❌ Invalid link. Please try again (must start with https://erli.pl/produkt/):",
-        "added_success": "✅ Product successfully added to tracking!",
+        "adding_in_progress": "⏳ Adding product and fetching current price. Please wait a few seconds...",
+        "added_success": "✅ Product successfully added and scanned!",
+        "add_failed": "❌ Failed to add product. Please try again later.",
         "already_exists": "ℹ️ This product is already in your list.",
         "cancel": "🚫 Action cancelled.",
         "btn_cancel": "❌ Cancel",

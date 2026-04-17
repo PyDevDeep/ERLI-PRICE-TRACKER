@@ -1,3 +1,4 @@
+import structlog
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -9,20 +10,25 @@ from aiogram.types import (
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
 )
 from sqlalchemy import delete
 
+from src.bot.handlers.common import get_main_kb
 from src.config.lexicon import LEXICON
 from src.config.settings import settings
+from src.integrations.serper_client import SerperClient
 from src.models.base import async_session_maker
 from src.models.product import Product
+from src.services.parser import parse_erli_data
+from src.services.price_monitor import store_history
 from src.services.product_repo import (
     get_or_create_product,
     get_paginated_products_with_price,
     get_product_by_id,
     get_product_history,
 )
+
+logger = structlog.get_logger(__name__)
 
 _lex: dict[str, str] = LEXICON.get(settings.ALERT_LANGUAGE, LEXICON["en"])
 
@@ -56,10 +62,11 @@ def get_product_kb(product_id: int) -> InlineKeyboardMarkup:
 @router.message(F.text == _lex["btn_cancel"], StateFilter(AddProduct))
 async def cmd_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await message.answer(text=_lex["cancel"], reply_markup=ReplyKeyboardRemove())
+    await message.answer(text=_lex["cancel"], reply_markup=get_main_kb())
 
 
 @router.message(Command(commands=["add"]), StateFilter(None))
+@router.message(F.text == _lex["btn_main_add"], StateFilter(None))
 async def cmd_add(message: Message, state: FSMContext) -> None:
     await state.set_state(AddProduct.waiting_for_url)
     await message.answer(text=_lex["ask_url"], reply_markup=get_cancel_kb())
@@ -73,15 +80,39 @@ async def process_url(message: Message, state: FSMContext) -> None:
         await message.answer(text=_lex["invalid_url"])
         return
 
-    async with async_session_maker() as session:
-        await get_or_create_product(session, url=url)
-        await session.commit()
+    status_msg = await message.answer(text=_lex["adding_in_progress"])
 
-    await state.clear()
-    await message.answer(text=_lex["added_success"], reply_markup=ReplyKeyboardRemove())
+    try:
+        serper = SerperClient()
+        raw_data = await serper.scrape_url(url)
+        parsed = parse_erli_data(raw_data)
+
+        async with async_session_maker() as session:
+            product = await get_or_create_product(session, url=url, name=parsed.get("name"))
+            await store_history(
+                session=session,
+                product_id=product.id,
+                price_min=parsed.get("price_min"),
+                price_max=parsed.get("price_max"),
+                rating=parsed.get("rating"),
+            )
+            await session.commit()
+
+        await state.clear()
+        await status_msg.delete()
+        await message.answer(text=_lex["added_success"], reply_markup=get_main_kb())
+
+    except Exception:
+        logger.exception("process_url_failed", url=url)
+        await state.clear()
+        await message.answer(
+            text=_lex.get("add_failed", "❌ Не вдалося додати товар. Спробуйте пізніше."),
+            reply_markup=get_main_kb(),
+        )
 
 
 @router.message(Command(commands=["list"]))
+@router.message(F.text == _lex["btn_main_list"])
 async def cmd_list(message: Message) -> None:
     async with async_session_maker() as session:
         products = await get_paginated_products_with_price(session)
