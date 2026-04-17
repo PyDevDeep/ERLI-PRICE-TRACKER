@@ -1,5 +1,5 @@
 # --- Stage 1: Builder ---
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
 RUN pip install poetry==1.8.5 poetry-plugin-export
 
@@ -15,7 +15,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry install --only main --no-root && rm -rf $POETRY_CACHE_DIR
 
 # --- Stage 2: Production ---
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
