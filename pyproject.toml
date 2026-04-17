@@ -25,6 +25,7 @@ sentry-sdk = {extras = ["fastapi"], version = "^1.44.1"}
 slack-sdk = "^3.27.1"
 openai = "^1.16.2"
 anthropic = "^0.23.1"
+apscheduler = "^3.11.2"
 python-telegram-bot = "^22.7"
 
 [tool.poetry.group.dev.dependencies]
@@ -66,7 +67,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pyright]
-include = ["app", "tests"]
+include = ["src", "tests"]
 exclude = ["**/node_modules", "**/.*", "**/__pycache__", "build", "dist", "venv", ".venv", "alembic"]
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
