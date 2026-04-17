@@ -2,10 +2,12 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from src.api.routes import router as api_router
 from src.config.settings import settings
+from src.exceptions import BaseAppError
 from src.integrations.ai_router import AIRouter
 from src.integrations.anthropic_client import AnthropicClient
 from src.integrations.openai_client import OpenAIClient
@@ -59,6 +61,15 @@ app = FastAPI(
 )
 
 app.include_router(api_router)
+
+
+@app.exception_handler(BaseAppError)
+async def app_error_handler(request: Request, exc: BaseAppError):
+    """Глобальний обробник кастомних винятків для API."""
+    return JSONResponse(
+        status_code=400,  # Загальний код клієнтської помилки
+        content={"error": exc.__class__.__name__, "message": exc.message},
+    )
 
 
 @app.get("/health")

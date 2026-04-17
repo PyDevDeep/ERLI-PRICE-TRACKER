@@ -10,20 +10,15 @@ from tenacity import (
 )
 
 from src.config.settings import settings
+from src.exceptions import SerperAPIError
 
 logger = structlog.get_logger(__name__)
-
-
-class SerperAPIError(Exception):
-    """Базовий виняток для помилок Serper API."""
-
-    pass
 
 
 class SerperClient:
     def __init__(self) -> None:
         self.base_url = "https://scrape.serper.dev"
-        self.headers = {
+        self.headers: dict[str, str] = {
             "X-API-KEY": settings.SERPER_API_KEY,
             "Content-Type": "application/json",
         }
@@ -56,12 +51,12 @@ class SerperClient:
                 status = e.response.status_code
                 logger.warning("serper_http_error", url=url, status=status)
 
-                # Відкидаємо клієнтські помилки без ретраю
                 if status in (400, 401, 403, 404):
-                    raise SerperAPIError(f"Fatal client error {status}: {e.response.text}") from e
+                    raise SerperAPIError(
+                        url=url, status_code=status, message=e.response.text
+                    ) from e
 
-                # Інші статуси (429, 5xx) підуть на ретрай через tenacity
                 raise
             except httpx.RequestError as e:
                 logger.warning("serper_network_error", url=url, error=str(e))
-                raise
+                raise SerperAPIError(url=url, status_code=None, message=str(e)) from e

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import (
@@ -32,9 +32,9 @@ async def add_product(request: ProductCreate, session: DbSession):
         return product
     except Exception as e:
         await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {str(e)}"
-        ) from e
+        from src.exceptions import DatabaseError
+
+        raise DatabaseError(operation="add_product", details=str(e)) from e
 
 
 @router.get("", response_model=list[ProductWithPriceResponse])
