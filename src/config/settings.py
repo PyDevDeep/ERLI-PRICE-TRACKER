@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = Field(default="")
 
+    # Presentation
+    ALERT_LANGUAGE: str = "uk"
+
     # Business Logic
     SCRAPE_INTERVAL_HOURS: int = 4
     PRICE_CHANGE_THRESHOLD_PERCENT: float = 5.0
