@@ -1,7 +1,7 @@
 # --- Stage 1: Builder ---
 FROM python:3.11-slim as builder
 
-RUN pip install poetry==1.7.1 poetry-plugin-export
+RUN pip install poetry==1.8.5 poetry-plugin-export
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
