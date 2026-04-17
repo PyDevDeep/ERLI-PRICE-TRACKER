@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
 
@@ -16,3 +17,18 @@ class ProductResponse(BaseModel):
 
     # Дозволяє Pydantic парсити дані напряму з SQLAlchemy моделей
     model_config = ConfigDict(from_attributes=True)
+
+
+class PriceHistoryResponse(BaseModel):
+    id: int
+    product_id: int
+    price_min: Decimal | None
+    price_max: Decimal | None
+    rating: Decimal | None
+    scraped_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductWithPriceResponse(ProductResponse):
+    latest_price: Decimal | None

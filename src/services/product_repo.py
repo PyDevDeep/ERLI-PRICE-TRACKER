@@ -1,9 +1,11 @@
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.price_history import PriceHistory
 from src.models.product import Product
 
 
@@ -35,3 +37,44 @@ async def get_product_by_id(session: AsyncSession, product_id: int) -> Product |
     stmt = select(Product).where(Product.id == product_id)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_paginated_products_with_price(
+    session: AsyncSession, offset: int = 0, limit: int = 100
+) -> list[dict[str, object]]:
+    """Повертає список продуктів з останньою ціною (PostgreSQL DISTINCT ON)."""
+    stmt = (
+        select(Product, PriceHistory.price_min.label("latest_price"))
+        .outerjoin(PriceHistory, Product.id == PriceHistory.product_id)
+        .distinct(Product.id)
+        .order_by(Product.id, PriceHistory.scraped_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    # Повертаємо dict для коректної серіалізації Pydantic моделлю, яка очікує latest_price
+    return [
+        {
+            "id": row[0].id,
+            "url": row[0].url,
+            "name": row[0].name,
+            "created_at": row[0].created_at,
+            "latest_price": row[1],
+        }
+        for row in rows
+    ]
+
+
+async def get_product_history(
+    session: AsyncSession, product_id: int, limit: int = 100, since: datetime | None = None
+) -> Sequence[PriceHistory]:
+    """Повертає історію цін для продукту, відсортовану від найновішої."""
+    stmt = select(PriceHistory).where(PriceHistory.product_id == product_id)
+
+    if since:
+        stmt = stmt.where(PriceHistory.scraped_at >= since)
+
+    stmt = stmt.order_by(PriceHistory.scraped_at.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return result.scalars().all()
