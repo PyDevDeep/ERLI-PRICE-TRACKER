@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Sequence
+from typing import Sequence, TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -39,9 +39,17 @@ async def get_product_by_id(session: AsyncSession, product_id: int) -> Product |
     return result.scalar_one_or_none()
 
 
+class ProductRow(TypedDict):
+    id: int
+    url: str
+    name: str | None
+    created_at: datetime
+    latest_price: float | None
+
+
 async def get_paginated_products_with_price(
     session: AsyncSession, offset: int = 0, limit: int = 100
-) -> list[dict[str, object]]:
+) -> list[ProductRow]:
     """Повертає список продуктів з останньою ціною (PostgreSQL DISTINCT ON)."""
     stmt = (
         select(Product, PriceHistory.price_min.label("latest_price"))
