@@ -28,6 +28,7 @@ postgres_data/
 .ruff_cache/
 .coverage
 htmlcov/
+products.csv
 
 # Logs & Debug
 logs/
