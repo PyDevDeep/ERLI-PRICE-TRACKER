@@ -1,3 +1,6 @@
+import asyncio
+from datetime import timedelta
+
 import structlog
 from telegram import Bot
 from telegram.constants import ParseMode
@@ -41,7 +44,12 @@ class TelegramClient:
 
         except RetryAfter as e:
             logger.warning("telegram_rate_limit", retry_after=e.retry_after)
-            # tenacity підхопить виняток і виконає затримку
+            delay = (
+                e.retry_after.total_seconds()
+                if isinstance(e.retry_after, timedelta)
+                else float(e.retry_after)
+            )
+            await asyncio.sleep(delay)
             raise
         except TelegramError as e:
             logger.error("telegram_send_error", error=str(e))
