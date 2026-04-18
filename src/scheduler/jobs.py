@@ -25,7 +25,6 @@ class _AppScheduler(AsyncIOScheduler):
 
 
 scheduler = _AppScheduler()
-_scrape_semaphore = asyncio.Semaphore(1)
 
 
 @scheduler.scheduled_job("interval", hours=settings.SCRAPE_INTERVAL_HOURS)  # type: ignore[misc]
@@ -45,59 +44,53 @@ async def scrape_all_products() -> None:
         products = await get_all_products(session)
         total = len(products)
 
-        if total == 0:
-            logger.info("scheduler_no_products_found")
-            return
+    if total == 0:
+        logger.info("scheduler_no_products_found")
+        return
 
-        for i, product in enumerate(products, 1):
-            async with _scrape_semaphore:
-                logger.info(
-                    "scraping_product",
-                    current=i,
-                    total=total,
+    for i, product in enumerate(products, 1):
+        logger.info(
+            "scraping_product",
+            current=i,
+            total=total,
+            product_id=product.id,
+            url=product.url,
+        )
+
+        try:
+            raw_data = await serper_client.scrape_url(product.url)
+            parsed = await parse_erli_data_smart(raw_data, ai_router)
+
+            async with async_session_maker() as session:
+                await store_history(
+                    session=session,
                     product_id=product.id,
+                    price_min=parsed.get("price_min"),
+                    price_max=parsed.get("price_max"),
+                    rating=parsed.get("rating"),
+                )
+                price_change = await compare_price(session, product.id)
+                await session.commit()
+
+            if price_change:
+                logger.info(
+                    "price_change_detected",
+                    product_id=product.id,
+                    delta=price_change.delta_percent,
+                )
+                await send_price_alert(
+                    telegram_client=telegram_client,
+                    product_name=price_change.product,
+                    old_price=price_change.old_price,
+                    new_price=price_change.new_price,
+                    delta_percent=price_change.delta_percent,
                     url=product.url,
                 )
 
-                try:
-                    raw_data = await serper_client.scrape_url(product.url)
-                    parsed = await parse_erli_data_smart(raw_data, ai_router)
+        except Exception as e:
+            logger.error("scraping_product_failed", product_id=product.id, error=str(e))
 
-                    await store_history(
-                        session=session,
-                        product_id=product.id,
-                        price_min=parsed.get("price_min"),
-                        price_max=parsed.get("price_max"),
-                        rating=parsed.get("rating"),
-                    )
-
-                    # Перевіряємо зміну ціни ДО коміту, щоб дані були в межах однієї логічної операції
-                    price_change = await compare_price(session, product.id)
-
-                    await session.commit()
-
-                    # Якщо є зміна — надсилаємо сповіщення (після коміту, щоб не тримати транзакцію)
-                    if price_change:
-                        logger.info(
-                            "price_change_detected",
-                            product_id=product.id,
-                            delta=price_change.delta_percent,
-                        )
-                        await send_price_alert(
-                            telegram_client=telegram_client,
-                            product_name=price_change.product,
-                            old_price=price_change.old_price,
-                            new_price=price_change.new_price,
-                            delta_percent=price_change.delta_percent,
-                            url=product.url,
-                        )
-
-                except Exception as e:
-                    logger.error("scraping_product_failed", product_id=product.id, error=str(e))
-                    await session.rollback()
-
-                # Жорсткий троттлінг 1 сек
-                await asyncio.sleep(1)
+        await asyncio.sleep(1)
 
     logger.info("scheduler_job_finished", job="scrape_all_products")
 
