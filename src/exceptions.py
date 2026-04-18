@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -20,7 +22,7 @@ class SerperAPIError(BaseAppError):
 
 
 class ParserError(BaseAppError):
-    def __init__(self, url: str | None, message: str, raw_data: dict[str, object] | None = None):
+    def __init__(self, url: str | None, message: str, raw_data: Mapping[str, object] | None = None):
         super().__init__(f"Parser Error: {message}")
         self.url = url
         self.raw_data = raw_data

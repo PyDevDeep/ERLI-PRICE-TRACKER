@@ -18,9 +18,9 @@ logger = structlog.get_logger(__name__)
 
 
 class TelegramClient:
-    def __init__(self) -> None:
-        self.bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-        self.chat_id = settings.TELEGRAM_CHAT_ID
+    def __init__(self, bot: Bot | None = None, chat_id: str | None = None) -> None:
+        self.bot = bot or Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        self.chat_id = chat_id or settings.TELEGRAM_CHAT_ID
 
     @retry(
         retry=retry_if_exception_type((TelegramError,)),
