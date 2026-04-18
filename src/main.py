@@ -50,9 +50,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     dp = create_dispatcher()
     dp["ai_router"] = ai_router
 
+    def _bot_crashed(task: "asyncio.Task[None]") -> None:
+        if not task.cancelled() and task.exception():
+            logger.error("bot_polling_crashed", error=str(task.exception()))
+
     logger.info("bot_starting")
     # Запускаємо polling бота у фоновому таску, щоб не блокувати FastAPI
     bot_task: asyncio.Task[None] = asyncio.create_task(dp.start_polling(bot))  # type: ignore[misc]
+    bot_task.add_done_callback(_bot_crashed)
 
     yield  # Додаток працює
 
