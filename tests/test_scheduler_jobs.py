@@ -238,13 +238,11 @@ class TestScrapeAllProducts:
                 patch("asyncio.sleep", new_callable=AsyncMock),
             ):
                 mock_serper = AsyncMock()
-                # перший продукт падає, другий — ні
                 mock_serper.scrape_url = AsyncMock(
                     side_effect=[RuntimeError("scrape failed"), {"text": "", "jsonld": {}}]
                 )
                 mock_serper_cls.return_value = mock_serper
 
-                # Не повинно кидати виняток
                 await scrape_all_products()
 
             assert mock_serper.scrape_url.await_count == 2

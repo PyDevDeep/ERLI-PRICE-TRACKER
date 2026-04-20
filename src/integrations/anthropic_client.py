@@ -7,7 +7,7 @@ Message = dict[str, str]
 
 
 class AnthropicError(Exception):
-    """Виняток для помилок взаємодії з Anthropic API."""
+    """Raised when an Anthropic API request fails."""
 
     pass
 
@@ -26,19 +26,14 @@ class AnthropicClient:
         )
 
     async def complete(self, messages: list[Message], max_tokens: int = 1000) -> str:
-        """
-        Виконує запит до /messages.
-        Конвертує формат OpenAI (system role) у формат Anthropic.
-        """
+        """Send a /messages request, converting OpenAI-style system roles to the Anthropic format."""
         logger.info("anthropic_request_start", model=self.model, max_tokens=max_tokens)
 
         system_prompt = ""
         anthropic_messages: list[Message] = []
 
-        # Конверсія формату згідно зі специфікацією
         for msg in messages:
             if msg["role"] == "system":
-                # Конкатенуємо системні повідомлення, якщо їх декілька
                 system_prompt += msg["content"] + "\n"
             else:
                 anthropic_messages.append({"role": msg["role"], "content": msg["content"]})
@@ -76,5 +71,5 @@ class AnthropicClient:
             raise AnthropicError(f"Anthropic network error: {e}") from e
 
     async def close(self) -> None:
-        """Graceful shutdown клієнта."""
+        """Close the underlying HTTP client."""
         await self.client.aclose()

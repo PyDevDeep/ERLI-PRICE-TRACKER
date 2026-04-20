@@ -18,7 +18,6 @@ from src.models.price_history import PriceHistory
 from src.models.product import Product
 from src.services.price_monitor import PriceChange, compare_price, store_history
 
-# ---------------------------------------------------------------------------
 # In-memory SQLite fixtures
 # ---------------------------------------------------------------------------
 

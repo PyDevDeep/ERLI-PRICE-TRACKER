@@ -1,6 +1,5 @@
 """
 Tests for src/services/product_repo.py.
-
 Coverage targets:
 - get_or_create_product: insert new, upsert on conflict (name update)
 - get_all_products: empty table, multiple products

@@ -26,10 +26,7 @@ async def store_history(
     price_max: Decimal | None,
     rating: Decimal | None,
 ) -> PriceHistory:
-    """
-    Зберігає новий запис історії цін.
-    Управління транзакцією (commit) лежить на викликаючому коді (orchestrator/handler).
-    """
+    """Flush a new price history record; the caller is responsible for committing."""
     history = PriceHistory(
         product_id=product_id,
         price_min=price_min,
@@ -38,7 +35,7 @@ async def store_history(
     )
 
     session.add(history)
-    await session.flush()  # Отримуємо ID без комміту транзакції
+    await session.flush()
 
     logger.info(
         "price_history_stored",
@@ -51,10 +48,7 @@ async def store_history(
 
 
 async def compare_price(session: AsyncSession, product_id: int) -> PriceChange | None:
-    """
-    Порівнює дві останні ціни продукту.
-    Повертає PriceChange, якщо різниця перевищує threshold, інакше None.
-    """
+    """Compare the two most recent prices; return PriceChange if the delta exceeds the threshold."""
     stmt = (
         select(PriceHistory, Product.name)
         .join(Product, Product.id == PriceHistory.product_id)
@@ -75,7 +69,6 @@ async def compare_price(session: AsyncSession, product_id: int) -> PriceChange |
     new_price = new_history.price_min
     old_price = old_history.price_min
 
-    # Захист від ділення на нуль або відсутності ціни
     if not new_price or not old_price or old_price == 0:
         return None
 

@@ -6,15 +6,14 @@ from src.config.settings import settings
 
 
 def create_bot() -> Bot:
-    """Ініціалізує та повертає інстанс бота."""
+    """Initialize and return the bot instance."""
     return Bot(token=settings.TELEGRAM_BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 
 
 def create_dispatcher() -> Dispatcher:
-    """Ініціалізує диспетчер та підключає всі роутери."""
+    """Initialize the dispatcher and register all routers."""
     dp = Dispatcher()
 
-    # Підключення роутерів
     dp.include_router(products.router)
     dp.include_router(common.router)
 

@@ -16,6 +16,7 @@ class TelegramClient:
         self.chat_id = chat_id or settings.TELEGRAM_CHAT_ID
 
     async def send_alert(self, message: str) -> bool:
+        """Send an HTML message to the configured chat, retrying on transient errors."""
         logger.info("telegram_send_start", chat_id=self.chat_id)
         attempts = 0
         max_attempts = 3
@@ -46,5 +47,6 @@ class TelegramClient:
         return False
 
     async def close(self) -> None:
+        """Close the bot session if it was created internally."""
         if self._owned:
             await self.bot.session.close()

@@ -12,10 +12,7 @@ from src.models.product import Product
 async def get_or_create_product(
     session: AsyncSession, url: str, name: str | None = None
 ) -> Product:
-    """
-    Upsert логіка: вставляє новий продукт або оновлює ім'я існуючого за URL.
-    Повертає об'єкт Product.
-    """
+    """Insert a new product or update its name if a row with the same URL already exists."""
     stmt = insert(Product).values(url=url, name=name)
     stmt = stmt.on_conflict_do_update(
         index_elements=["url"], set_={"name": stmt.excluded.name}
@@ -26,14 +23,14 @@ async def get_or_create_product(
 
 
 async def get_all_products(session: AsyncSession) -> Sequence[Product]:
-    """Повертає всі продукти для черги скрапінгу."""
+    """Return all products for the scraping queue."""
     stmt = select(Product)
     result = await session.execute(stmt)
     return result.scalars().all()
 
 
 async def get_product_by_id(session: AsyncSession, product_id: int) -> Product | None:
-    """Отримує продукт за ID."""
+    """Return the product with the given ID, or None if not found."""
     stmt = select(Product).where(Product.id == product_id)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -50,7 +47,7 @@ class ProductRow(TypedDict):
 async def get_paginated_products_with_price(
     session: AsyncSession, offset: int = 0, limit: int = 100
 ) -> list[ProductRow]:
-    """Повертає список продуктів з останньою ціною (PostgreSQL DISTINCT ON)."""
+    """Return paginated products each with their latest price using PostgreSQL DISTINCT ON."""
     stmt = (
         select(Product, PriceHistory.price_min.label("latest_price"))
         .outerjoin(PriceHistory, Product.id == PriceHistory.product_id)
@@ -61,7 +58,6 @@ async def get_paginated_products_with_price(
     )
     result = await session.execute(stmt)
     rows = result.all()
-    # Повертаємо dict для коректної серіалізації Pydantic моделлю, яка очікує latest_price
     return [
         {
             "id": row[0].id,
@@ -77,7 +73,7 @@ async def get_paginated_products_with_price(
 async def get_product_history(
     session: AsyncSession, product_id: int, limit: int = 100, since: datetime | None = None
 ) -> Sequence[PriceHistory]:
-    """Повертає історію цін для продукту, відсортовану від найновішої."""
+    """Return price history for a product, ordered newest first."""
     stmt = select(PriceHistory).where(PriceHistory.product_id == product_id)
 
     if since:

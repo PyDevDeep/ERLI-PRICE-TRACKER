@@ -19,7 +19,7 @@ class AIResponse:
 
 
 class AIRouterError(Exception):
-    """Виняток, коли обидва провайдери відмовили."""
+    """Raised when both primary and fallback AI providers fail."""
 
     def __init__(self, message: str, primary_error: Exception, fallback_error: Exception) -> None:
         super().__init__(message)
@@ -34,17 +34,15 @@ class AIRouter:
         self.openai = openai
         self.anthropic = anthropic
 
-        # Налаштування Circuit Breaker
         self.threshold = settings.AI_ROUTER_CIRCUIT_BREAKER_THRESHOLD
         self.reset_seconds = settings.AI_ROUTER_CIRCUIT_BREAKER_RESET_SECONDS
 
-        # Стан Circuit Breaker
         self._failure_count: int = 0
         self._circuit_opened_at: datetime | None = None
 
     def _is_circuit_open(self) -> bool:
+        """Return True if the circuit breaker is open and the reset timeout has not passed."""
         if self._failure_count >= self.threshold and self._circuit_opened_at:
-            # Перевіряємо, чи минув час блокування
             elapsed = datetime.now(timezone.utc) - self._circuit_opened_at
             if elapsed > timedelta(seconds=self.reset_seconds):
                 logger.info(
@@ -55,18 +53,21 @@ class AIRouter:
         return False
 
     def _record_success(self) -> None:
+        """Reset circuit breaker state after a successful primary call."""
         if self._failure_count > 0:
             logger.info("ai_router_circuit_closed", msg="Primary provider recovered")
         self._failure_count = 0
         self._circuit_opened_at = None
 
     def _record_failure(self) -> None:
+        """Increment failure counter and open circuit breaker when threshold is reached."""
         self._failure_count += 1
         if self._failure_count >= self.threshold and not self._circuit_opened_at:
             self._circuit_opened_at = datetime.now(timezone.utc)
             logger.error("ai_router_circuit_open", failure_count=self._failure_count)
 
     async def complete(self, messages: list[dict[str, str]], max_tokens: int = 1000) -> AIResponse:
+        """Send a completion request, falling back to Anthropic if OpenAI fails."""
         start_time = time.perf_counter()
         primary_error = None
 
@@ -84,7 +85,6 @@ class AIRouter:
             logger.warning("ai_router_skipping_primary", reason="circuit_breaker_open")
             primary_error = Exception("Circuit breaker is OPEN")
 
-        # Fallback на Anthropic
         try:
             content = await self.anthropic.complete(messages, max_tokens)
             latency = int((time.perf_counter() - start_time) * 1000)
@@ -98,6 +98,6 @@ class AIRouter:
             ) from e
 
     async def close(self) -> None:
-        """Закриває з'єднання обох клієнтів."""
+        """Close connections for both AI clients."""
         await self.openai.close()
         await self.anthropic.close()

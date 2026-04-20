@@ -125,7 +125,7 @@ async def generate_weekly_insights() -> None:
             if latest and oldest:
                 delta = float((latest - oldest) / oldest) * 100
                 market_data.append(
-                    f"Товар: {p.name} | Ціна тиждень тому: {oldest} zl | Поточна ціна: {latest} zl | Зміна: {delta:.1f}%"
+                    f"Product: {p.name} | Price last week: {oldest} zl | Current price: {latest} zl | Change: {delta:.1f}%"
                 )
 
     if not market_data:
@@ -133,16 +133,16 @@ async def generate_weekly_insights() -> None:
         return
 
     context_str = "\n".join(market_data)
-    prompt = f"""Ти фінансовий асистент. Проаналізуй зміну цін на товари користувача за тиждень і напиши коротке, цікаве зведення (до 3-4 абзаців).
-Стиль: дружній, лаконічний. Мова: українська.
-Виділи головне: що подешевшало (рекомендуй брати), що подорожчало. Не перелічуй всі товари як робот, зроби висновки про тренди.
+    prompt = f"""You are a financial assistant. Analyze the user's product price changes over the past week and write a short, engaging summary (up to 3-4 paragraphs).
+Style: friendly, concise. Language: Ukrainian.
+Highlight the key points: what got cheaper (recommend buying), what got more expensive. Don't list every product mechanically — draw conclusions about trends.
 
-Сирі дані:
+Raw data:
 {context_str}"""
 
     try:
         response = await ai_router.complete([{"role": "user", "content": prompt}], max_tokens=400)
-        report = f"📊 <b>Твої цінові інсайти за тиждень:</b>\n\n{response.content}"
+        report = f"📊 <b>Your weekly price insights:</b>\n\n{response.content}"
         await telegram_client.send_alert(report)
         logger.info("weekly_insights_sent")
     except Exception as e:

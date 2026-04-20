@@ -27,7 +27,7 @@ async def parse_erli_data_smart(data: dict[str, Any], ai_router: AIRouter) -> di
         "rating": None,
     }
 
-    # --- Пріоритет 1: Швидкий парсинг JSON-LD ---
+    # Priority 1: fast JSON-LD parse
     jsonld: dict[str, Any] = data.get("jsonld") or {}
     if jsonld:
         result["name"] = jsonld.get("name")
@@ -55,7 +55,7 @@ async def parse_erli_data_smart(data: dict[str, Any], ai_router: AIRouter) -> di
         logger.info("parser_jsonld_success")
         return result
 
-    # --- Пріоритет 2: LLM Fallback (замість Regex) ---
+    # Priority 2: LLM fallback
     text: str = str(data.get("text", ""))
     if not text:
         logger.warning("parser_failed_no_text")

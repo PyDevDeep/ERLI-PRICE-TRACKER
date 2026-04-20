@@ -1,6 +1,5 @@
 """
 Tests for src/exceptions.py — custom exception hierarchy.
-
 Coverage targets:
 - BaseAppError: message attribute, str representation
 - SerperAPIError: fields (url, status_code), message format, None status_code

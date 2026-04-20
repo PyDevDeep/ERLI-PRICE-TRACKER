@@ -22,10 +22,9 @@ logger = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Управління життєвим циклом додатку."""
+    """Manage application startup and shutdown: AI router, scheduler, and bot polling."""
     logger.info("app_starting")
 
-    # 1-3. Ініціалізація AI Router та його під-клієнтів
     openai_client = OpenAIClient(
         api_key=settings.OPENAI_API_KEY,
         model=settings.OPENAI_MODEL,
@@ -38,14 +37,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     ai_router = AIRouter(openai_client, anthropic_client, settings)
 
-    # 4. Inject ai_router у планувальник
     scheduler.ai_router = ai_router
 
-    # 5. Запуск APScheduler
     scheduler.start()
     logger.info("scheduler_started", interval_hours=settings.SCRAPE_INTERVAL_HOURS)
 
-    # 6. Ініціалізація та запуск Telegram Бота
     bot = create_bot()
     dp = create_dispatcher()
     dp["ai_router"] = ai_router
@@ -55,22 +51,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.error("bot_polling_crashed", error=str(task.exception()))
 
     logger.info("bot_starting")
-    # Запускаємо polling бота у фоновому таску, щоб не блокувати FastAPI
+    # Run bot polling as a background task so it does not block FastAPI
     bot_task: asyncio.Task[None] = asyncio.create_task(dp.start_polling(bot))  # type: ignore[misc]
     bot_task.add_done_callback(_bot_crashed)
 
-    yield  # Додаток працює
+    yield
 
-    # --- Shutdown sequence ---
     logger.info("app_shutting_down")
 
-    # Безпечна зупинка бота
     await dp.stop_polling()
     bot_task.cancel()
     await bot.session.close()
     logger.info("bot_stopped")
 
-    # Зупинка планувальника та клієнтів
     scheduler.shutdown()
     await ai_router.close()
 
@@ -88,9 +81,9 @@ app.include_router(api_router)
 
 @app.exception_handler(BaseAppError)
 async def app_error_handler(request: Request, exc: BaseAppError):
-    """Глобальний обробник кастомних винятків для API."""
+    """Handle custom application exceptions and return a structured JSON 400 response."""
     return JSONResponse(
-        status_code=400,  # Загальний код клієнтської помилки
+        status_code=400,
         content={"error": exc.__class__.__name__, "message": exc.message},
     )
 

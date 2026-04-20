@@ -11,7 +11,6 @@ from src.integrations.openai_client import OpenAIError
 
 @pytest.fixture
 def mock_settings() -> Settings:
-    # Заповнюємо обов'язкові поля dummy-даними для валідації
     settings = Settings(
         SERPER_API_KEY="test",
         TELEGRAM_BOT_TOKEN="test",
@@ -20,7 +19,6 @@ def mock_settings() -> Settings:
         OPENAI_API_KEY="test",
         ANTHROPIC_API_KEY="test",
     )
-    # Форсуємо параметри Circuit Breaker для тестів
     settings.AI_ROUTER_CIRCUIT_BREAKER_THRESHOLD = 3
     settings.AI_ROUTER_CIRCUIT_BREAKER_RESET_SECONDS = 60
     return settings
@@ -28,6 +26,7 @@ def mock_settings() -> Settings:
 
 @pytest.fixture
 def mock_openai() -> AsyncMock:
+    """AsyncMock for OpenAIClient that returns a successful response."""
     mock = AsyncMock()
     mock.complete.return_value = "openai response"
     return mock
@@ -35,6 +34,7 @@ def mock_openai() -> AsyncMock:
 
 @pytest.fixture
 def mock_anthropic() -> AsyncMock:
+    """AsyncMock for AnthropicClient that returns a successful response."""
     mock = AsyncMock()
     mock.complete.return_value = "anthropic response"
     return mock
@@ -88,13 +88,11 @@ async def test_circuit_breaker_opens_and_skips_primary(
 ) -> None:
     mock_openai.complete.side_effect = OpenAIError("Fail")
 
-    # Провалюємо запити до досягнення ліміту (3)
     for _ in range(3):
         await router.complete([{"role": "user", "content": "test"}])
 
     assert router._is_circuit_open() is True
 
-    # Наступний (4-й) виклик має ігнорувати OpenAI
     mock_openai.reset_mock()
     await router.complete([{"role": "user", "content": "test"}])
     mock_openai.complete.assert_not_called()
@@ -112,9 +110,7 @@ async def test_circuit_breaker_resets_after_timeout(
 
     assert router._is_circuit_open() is True
 
-    # Емулюємо проходження часу (61 секунда)
     router._circuit_opened_at = datetime.now(timezone.utc) - timedelta(seconds=61)
-    # Емулюємо відновлення OpenAI
     mock_openai.complete.side_effect = None
 
     response = await router.complete([{"role": "user", "content": "test"}])
@@ -130,12 +126,10 @@ async def test_success_resets_failure_count(
 ) -> None:
     mock_openai.complete.side_effect = OpenAIError("Fail")
 
-    # 2 провали (менше ліміту)
     await router.complete([{"role": "user", "content": "test"}])
     await router.complete([{"role": "user", "content": "test"}])
     assert router._failure_count == 2
 
-    # 1 успіх
     mock_openai.complete.side_effect = None
     await router.complete([{"role": "user", "content": "test"}])
     assert router._failure_count == 0

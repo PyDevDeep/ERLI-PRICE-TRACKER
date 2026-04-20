@@ -10,7 +10,6 @@ class Base(DeclarativeBase):
     pass
 
 
-# Налаштування пулу для віддаленої БД згідно специфікації
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
@@ -29,5 +28,6 @@ async_session_maker = async_sessionmaker(
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield an async database session for use as a FastAPI dependency."""
     async with async_session_maker() as session:
         yield session

@@ -24,7 +24,6 @@ from src.models.base import Base
 from src.models.price_history import PriceHistory
 from src.models.product import Product
 
-# ---------------------------------------------------------------------------
 # App + DB session override
 # ---------------------------------------------------------------------------
 

@@ -25,7 +25,7 @@ from src.integrations.serper_client import SerperClient
 
 @pytest.fixture
 def client() -> SerperClient:
-    """SerperClient з фіксованим API ключем без звернення до settings."""
+    """SerperClient with a fixed API key, not reading from settings."""
     with patch("src.integrations.serper_client.settings") as mock_settings:
         mock_settings.SERPER_API_KEY = "test-api-key"
         return SerperClient()
@@ -34,7 +34,7 @@ def client() -> SerperClient:
 def _make_response(
     status_code: int, json_data: Mapping[str, object] | None = None, text: str = ""
 ) -> MagicMock:
-    """Будує mock httpx.Response."""
+    """Build a mock httpx.Response with the given status code and body."""
     resp = MagicMock(spec=httpx.Response)
     resp.status_code = status_code
     resp.text = text
@@ -59,7 +59,7 @@ class TestSerperClientScrapeUrl:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_scrape_url_success_returns_dict(self, client: SerperClient) -> None:
-        """Успішний POST повертає розібраний JSON як dict."""
+        """Successful POST returns parsed JSON as dict."""
         payload = {"text": "product text", "jsonld": {"name": "Widget"}}
         mock_resp = _make_response(200, json_data=payload)
 
@@ -77,7 +77,7 @@ class TestSerperClientScrapeUrl:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_scrape_url_posts_correct_json_body(self, client: SerperClient) -> None:
-        """URL передається у тілі запиту як {'url': ...}."""
+        """URL is forwarded in the request body as {'url': ...}."""
         mock_resp = _make_response(200, json_data={})
 
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -95,7 +95,7 @@ class TestSerperClientScrapeUrl:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_scrape_url_sends_api_key_header(self, client: SerperClient) -> None:
-        """X-API-KEY header відправляється з кожним запитом."""
+        """X-API-KEY header is sent with every request."""
         mock_resp = _make_response(200, json_data={})
 
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -120,7 +120,7 @@ class TestSerperClientScrapeUrl:
     async def test_scrape_url_non_retryable_status_raises_serper_error(
         self, client: SerperClient, status_code: int
     ) -> None:
-        """HTTP 4xx (400/401/403/404) → SerperAPIError без повтору."""
+        """HTTP 4xx (400/401/403/404) → SerperAPIError without retry."""
         mock_resp = _make_response(status_code, text="error body")
 
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -143,7 +143,7 @@ class TestSerperClientScrapeUrl:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_scrape_url_server_error_retries_and_reraises(self, client: SerperClient) -> None:
-        """HTTP 500 повторюється 3 рази (tenacity), потім re-raise."""
+        """HTTP 500 is retried 3 times by tenacity before re-raising."""
         mock_resp = _make_response(500, text="server error")
 
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -183,7 +183,7 @@ class TestSerperClientScrapeUrl:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_scrape_url_network_error_includes_url(self, client: SerperClient) -> None:
-        """SerperAPIError спричинений мережевою помилкою містить правильний url."""
+        """SerperAPIError caused by a network failure contains the correct url."""
         with patch("httpx.AsyncClient") as mock_client_cls:
             mock_http = AsyncMock()
             mock_http.__aenter__ = AsyncMock(return_value=mock_http)

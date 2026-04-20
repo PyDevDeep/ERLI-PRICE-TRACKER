@@ -3,7 +3,6 @@ import os
 import sys
 from decimal import Decimal
 
-# Додаємо корінь проекту до PYTHONPATH для коректних імпортів при запуску скрипта
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.integrations.telegram_client import TelegramClient
@@ -11,17 +10,17 @@ from src.services.alerter import send_price_alert
 
 
 async def main() -> None:
-    print("Ініціалізація Telegram клієнта...")
+    """Send a test price drop alert via Telegram."""
+    print("Initializing Telegram client...")
     client = TelegramClient()
 
-    # Імітація падіння ціни (price_drop)
-    product_name = "Sony PlayStation 5 (Тестове сповіщення)"
+    product_name = "Sony PlayStation 5 (Test notification)"
     old_price = Decimal("2500.00")
     new_price = Decimal("2350.50")
     delta_percent = -5.98
     url = "https://erli.pl/produkt/ps5-test"
 
-    print(f"Надсилання тестового повідомлення для: {product_name}...")
+    print(f"Sending test message for: {product_name}...")
 
     success = await send_price_alert(
         telegram_client=client,
@@ -33,11 +32,9 @@ async def main() -> None:
     )
 
     if success:
-        print("✅ Сповіщення успішно надіслано! Перевір свій Telegram чат.")
+        print("✅ Notification sent successfully! Check your Telegram chat.")
     else:
-        print(
-            "❌ Помилка надсилання. Перевір термінал на наявність помилок та валідність токенів у .env."
-        )
+        print("❌ Send failed. Check the terminal for errors and verify tokens in .env.")
 
 
 if __name__ == "__main__":

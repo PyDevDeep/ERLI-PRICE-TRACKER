@@ -24,7 +24,7 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def add_product(request: ProductCreate, session: DbSession):
-    """Додає новий продукт для відстеження або оновлює існуючий."""
+    """Add a new tracked product or update an existing one."""
     try:
         url_str = str(request.url)
         product = await get_or_create_product(session, url=url_str, name=request.name)
@@ -39,7 +39,7 @@ async def add_product(request: ProductCreate, session: DbSession):
 
 @router.get("", response_model=list[ProductWithPriceResponse])
 async def list_products(session: DbSession, skip: int = 0, limit: int = 100):
-    """Повертає список всіх відстежуваних продуктів з їхньою останньою ціною."""
+    """Return all tracked products with their latest price."""
     products = await get_paginated_products_with_price(session, offset=skip, limit=limit)
     return products
 
@@ -51,6 +51,6 @@ async def get_history(
     limit: int = 100,
     since: datetime | None = None,
 ):
-    """Повертає історію цін для конкретного продукту."""
+    """Return price history for a specific product."""
     history = await get_product_history(session, product_id=product_id, limit=limit, since=since)
     return history

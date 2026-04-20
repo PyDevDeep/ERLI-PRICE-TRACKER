@@ -19,7 +19,8 @@ from src.services.product_repo import get_or_create_product
 
 
 async def main(url: str) -> None:
-    print(f"[*] Ініціалізація скрапінгу для URL: {url}")
+    """Scrape a single product URL and send a price alert if the price changed."""
+    print(f"[*] Initializing scraping for URL: {url}")
 
     openai_client = OpenAIClient(
         api_key=settings.OPENAI_API_KEY,
@@ -37,21 +38,21 @@ async def main(url: str) -> None:
     telegram = TelegramClient()
 
     try:
-        print("[*] Виконання запиту до Serper API...")
+        print("[*] Sending request to Serper API...")
         raw_data = await serper.scrape_url(url)
 
-        print("[*] Парсинг даних...")
+        print("[*] Parsing data...")
         parsed = await parse_erli_data_smart(raw_data, ai_router)
 
-        print("\n--- Результат парсингу ---")
+        print("\n--- Parsing result ---")
         for k, v in parsed.items():
             print(f"  {k}: {v}")
         print("--------------------------\n")
 
         if not parsed.get("price_min"):
-            print("[!] УВАГА: Ціну не знайдено. Збереження історії може бути неповним.")
+            print("[!] WARNING: Price not found. History may be incomplete.")
 
-        print("[*] Збереження в базу даних...")
+        print("[*] Saving to database...")
         async with async_session_maker() as session:
             product = await get_or_create_product(
                 session=session, url=url, name=parsed.get("name") or "Manual Scrape Product"
@@ -69,8 +70,8 @@ async def main(url: str) -> None:
             await session.commit()
 
             if price_change:
-                print(f"[+] Виявлено зміну ціни: {price_change.delta_percent}%")
-                print("[*] Відправка Telegram сповіщення...")
+                print(f"[+] Price change detected: {price_change.delta_percent}%")
+                print("[*] Sending Telegram notification...")
                 await send_price_alert(
                     telegram_client=telegram,
                     product_name=price_change.product,
@@ -79,23 +80,23 @@ async def main(url: str) -> None:
                     delta_percent=price_change.delta_percent,
                     url=product.url,
                 )
-                print("[+] Сповіщення відправлено.")
+                print("[+] Notification sent.")
             else:
-                print("[-] Змін ціни не виявлено (або це перший запис).")
+                print("[-] No price change detected (or this is the first record).")
 
-        print("[+] Успішно завершено.")
+        print("[+] Completed successfully.")
         sys.exit(0)
 
     except Exception as e:
-        print(f"[X] КРИТИЧНА ПОМИЛКА: {e}")
+        print(f"[X] CRITICAL ERROR: {e}")
         sys.exit(1)
     finally:
         await ai_router.close()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ручний скрапінг товару ERLI.pl")
-    parser.add_argument("--url", required=True, help="URL товару на erli.pl")
+    parser = argparse.ArgumentParser(description="Manual scraping of an ERLI.pl product")
+    parser.add_argument("--url", required=True, help="Product URL on erli.pl")
     args = parser.parse_args()
 
     asyncio.run(main(args.url))

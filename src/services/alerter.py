@@ -18,12 +18,10 @@ def format_alert_message(
 ) -> str:
     """Генерує локалізоване повідомлення про зміну ціни."""
     lang = settings.ALERT_LANGUAGE
-    # Fallback на англійську, якщо мова не знайдена
     lexicon = ALERTS.get(lang, ALERTS["en"])
 
     title = lexicon["title"].format(product_name=product_name)
 
-    # Форматуємо зміну ціни залежно від напрямку (округлюємо до 2 знаків)
     abs_delta = round(abs(delta_percent), 2)
 
     if new_price < old_price:
@@ -48,7 +46,7 @@ async def send_price_alert(
     delta_percent: float,
     url: str,
 ) -> bool:
-    """Викликається бізнес-логікою для надсилання сповіщення."""
+    """Format and send a price change alert; return True on success."""
     message = format_alert_message(
         product_name=product_name,
         old_price=old_price,

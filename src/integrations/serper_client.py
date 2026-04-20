@@ -22,7 +22,6 @@ class SerperClient:
             "X-API-KEY": settings.SERPER_API_KEY,
             "Content-Type": "application/json",
         }
-        # Таймаут згідно з Roadmap (1.5s latency + margin)
         self.timeout = httpx.Timeout(30.0)
 
     @retry(  # type: ignore[misc]
@@ -32,6 +31,7 @@ class SerperClient:
         reraise=True,
     )
     async def scrape_url(self, url: str) -> dict[str, object]:
+        """Scrape the given URL via Serper API and return parsed JSON data."""
         logger.info("serper_request_start", url=url)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:

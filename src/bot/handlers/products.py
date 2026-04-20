@@ -48,12 +48,14 @@ class AddProduct(StatesGroup):
 
 
 def get_cancel_kb() -> ReplyKeyboardMarkup:
+    """Build the cancel reply keyboard."""
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=_lex["btn_cancel"])]], resize_keyboard=True
     )
 
 
 def get_product_kb(product_id: int) -> InlineKeyboardMarkup:
+    """Build inline keyboard with history and delete buttons for a product."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -69,6 +71,7 @@ def get_product_kb(product_id: int) -> InlineKeyboardMarkup:
 @router.message(Command(commands=["cancel"]), StateFilter(AddProduct))
 @router.message(F.text == _lex["btn_cancel"], StateFilter(AddProduct))
 async def cmd_cancel(message: Message, state: FSMContext) -> None:
+    """Handle /cancel command — clear FSM state and return to main menu."""
     await state.clear()
     await message.answer(text=_lex["cancel"], reply_markup=get_main_kb())
 
@@ -76,12 +79,14 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
 @router.message(Command(commands=["add"]), StateFilter(None))
 @router.message(F.text == _lex["btn_main_add"], StateFilter(None))
 async def cmd_add(message: Message, state: FSMContext) -> None:
+    """Handle /add command — prompt the user for a product URL."""
     await state.set_state(AddProduct.waiting_for_url)
     await message.answer(text=_lex["ask_url"], reply_markup=get_cancel_kb())
 
 
 @router.message(StateFilter(AddProduct.waiting_for_url))
 async def process_url(message: Message, state: FSMContext, ai_router: "AIRouter") -> None:
+    """Validate the URL, scrape the product, and store it in the database."""
     url = message.text.strip() if message.text else ""
 
     if not url.startswith("https://erli.pl/produkt/"):
@@ -122,6 +127,7 @@ async def process_url(message: Message, state: FSMContext, ai_router: "AIRouter"
 @router.message(Command(commands=["list"]))
 @router.message(F.text == _lex["btn_main_list"])
 async def cmd_list(message: Message) -> None:
+    """Handle /list command — show all tracked products."""
     async with async_session_maker() as session:
         products = await get_paginated_products_with_price(session)
 
@@ -147,6 +153,7 @@ async def cmd_list(message: Message) -> None:
 
 @router.callback_query(F.data.startswith("hist_"))
 async def callback_history(callback: CallbackQuery) -> None:
+    """Show the last 5 price history entries for a product."""
     assert callback.data is not None
     assert isinstance(callback.message, Message)
     product_id = int(callback.data.split("_")[1])
@@ -172,6 +179,7 @@ async def callback_history(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("del_conf_"))
 async def callback_delete_confirm(callback: CallbackQuery) -> None:
+    """Show a delete confirmation prompt for a product."""
     assert callback.data is not None
     assert isinstance(callback.message, Message)
     product_id = int(callback.data.split("_")[2])
@@ -198,6 +206,7 @@ async def callback_delete_confirm(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("del_exec_"))
 async def callback_delete_execute(callback: CallbackQuery) -> None:
+    """Delete a product and confirm in the chat."""
     assert callback.data is not None
     assert isinstance(callback.message, Message)
     product_id = int(callback.data.split("_")[2])

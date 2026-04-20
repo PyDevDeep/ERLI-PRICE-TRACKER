@@ -1,6 +1,6 @@
 LEXICON: dict[str, dict[str, str]] = {
     "uk": {
-        # Команди та загальний UI
+        # Commands and general UI
         "start": (
             "👋 Привіт! Я ERLI.PL Price Tracker Bot.\n\n"
             "Я допоможу тобі автоматично відстежувати знижки на товари.\n\n"
@@ -19,7 +19,7 @@ LEXICON: dict[str, dict[str, str]] = {
             "/history &lt;ID&gt; — Переглянути історію цін конкретного товару\n"
             "/delete &lt;ID&gt; — Видалити товар"
         ),
-        # Головне меню
+        # Main menu
         "btn_main_add": "➕ Додати товар",
         "btn_main_list": "📋 Мій список",
         "btn_main_help": "❓ Довідка",
@@ -32,7 +32,7 @@ LEXICON: dict[str, dict[str, str]] = {
         "already_exists": "ℹ️ Цей товар уже є у твоєму списку.",
         "cancel": "🚫 Дію скасовано.",
         "btn_cancel": "❌ Скасувати",
-        # Список та історія
+        # List and history
         "list_header": "📋 <b>Ваші товари під наглядом:</b>\n\n",
         "list_item": "{index}. <b>{name}</b>\n💰 Ціна: {price} zł\n🔗 <a href='{url}'>Переглянути на Erli</a>\n\n",
         "empty_list": "📭 Ваш список порожній. Додайте товар через /add",
@@ -44,7 +44,7 @@ LEXICON: dict[str, dict[str, str]] = {
         "btn_delete": "🗑 Видалити",
         "btn_back": "⬅️ Назад до списку",
         "btn_confirm_delete": "✅ Так, видалити",
-        # Сповіщення (Alerts)
+        # Alerts
         "alert_title": "🔔 <b>Зміна ціни:</b> {product_name}",
         "price_drop": "📉 {old_price} zł → {new_price} zł (⬇️ {delta_percent}%)",
         "price_rise": "📈 {old_price} zł → {new_price} zł (⬆️ {delta_percent}%)",

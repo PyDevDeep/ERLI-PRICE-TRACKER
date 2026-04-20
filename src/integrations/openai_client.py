@@ -5,7 +5,7 @@ logger = structlog.get_logger(__name__)
 
 
 class OpenAIError(Exception):
-    """Виняток для помилок взаємодії з OpenAI API."""
+    """Raised when an OpenAI API request fails."""
 
     pass
 
@@ -23,7 +23,7 @@ class OpenAIClient:
         )
 
     async def complete(self, messages: list[dict[str, str]], max_tokens: int = 1000) -> str:
-        """Виконує запит до /chat/completions."""
+        """Send a /chat/completions request and return the text content."""
         logger.info("openai_request_start", model=self.model, max_tokens=max_tokens)
 
         try:
@@ -55,5 +55,5 @@ class OpenAIClient:
             raise OpenAIError(f"OpenAI network error: {e}") from e
 
     async def close(self) -> None:
-        """Graceful shutdown клієнта."""
+        """Close the underlying HTTP client."""
         await self.client.aclose()
