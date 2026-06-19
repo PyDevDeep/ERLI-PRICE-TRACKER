@@ -106,9 +106,11 @@ Open a direct chat with your Telegram Bot and manage tracking interactively:
 
 ## Documentation Map (Divio System)
 
-This project organizes its technical documentation following the Divio System structure to separate different documentation contexts clearly.
+- [Project Documentation Folder](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs)
 
-- 🎓 **[Tutorial](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/TUTORIAL.md)**: A step-by-step tutorial to configure, run, and trigger your first price change alert.
-- 🛠️ **[How-To Guides](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/DEPLOYMENT.md)**: Production deployment instructions for Railway.app, setting up Sentry logging, and configuring Uptime Robot.
-- 📋 **[Reference](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/API.md)**: Environment configuration schemas, REST API specs, bot commands, and the Serper.dev cost model.
-- 🧠 **[Explanation](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/ARCHITECTURE.md)**: Architectural design decisions, the AI Router fallback flow, circuit breaker states, and risk mitigation strategies.
+| File Path | Documentation Type | Description |
+| :--- | :--- | :--- |
+| 🎓 **[docs/TUTORIAL.md](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/TUTORIAL.md)** | Tutorial | A step-by-step guide to configure, run, and trigger your first price change alert. |
+| 🛠️ **[docs/DEPLOYMENT.md](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/DEPLOYMENT.md)** | How-To Guide | Production deployment instructions for Railway.app, Sentry error logging, and Uptime Robot. |
+| 📋 **[docs/API.md](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/API.md)** | Reference | Environment variables schema, REST API specs, bot commands list, and Serper cost model. |
+| 🧠 **[docs/ARCHITECTURE.md](file:///C:/AI/ERLIPL_PRICE_TRACKE/docs/ARCHITECTURE.md)** | Explanation | Architectural design decisions, AI Router fallback, circuit breaker states, and risk mitigations. |
