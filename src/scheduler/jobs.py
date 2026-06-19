@@ -142,7 +142,7 @@ Raw data:
 
     try:
         response = await ai_router.complete([{"role": "user", "content": prompt}], max_tokens=400)
-        report = f"📊 <b>Your weekly price insights:</b>\n\n{response.content}"
+        report = f"📊 <b>Щотижневі цінові інсайти:</b>\n\n{response.content}"
         await telegram_client.send_alert(report)
         logger.info("weekly_insights_sent")
     except Exception as e:

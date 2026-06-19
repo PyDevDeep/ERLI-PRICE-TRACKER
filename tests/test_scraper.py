@@ -10,11 +10,11 @@ async def test_serper_live_request():
     test_url = "https://erli.pl/kategoria?phrase=ps+5"
 
     try:
-        html_text = await client.scrape_url(test_url)
-
-        assert isinstance(html_text, str)
-        assert len(html_text) > 0
-        assert "zł" in html_text.lower() or "erli" in html_text.lower()
+        data = await client.scrape_url(test_url)
+        assert isinstance(data, dict)
+        text = str(data.get("text", ""))
+        assert len(text) > 0
+        assert "zł" in text.lower() or "erli" in text.lower()
 
     except SerperAPIError as e:
         pytest.fail(f"API Error during integration test: {e}")
